@@ -1,0 +1,61 @@
+1. docker built -t <name> .
+2. docker run -it <name>
+
+-it: interactive
+
+# Postgres
+
+docker run -it \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    --network=pg-network \
+    --name pg-database \
+    -p 5432:5432 \
+postgres:13
+
+docker run -it \
+    -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+    -e PGADMIN_DEFAULT_PASSWORD="password" \
+    --network=pg-network \
+    --name pg-admin
+    -p 8080:80
+dpage/pgadmin4
+
+#pgcli
+
+pgcli -h localhost -p 5432 -u root -d ny_taxi
+
+
+#Python code for data ingestion pipeline
+
+## Converting ipynb file to script
+
+jupyter nbconvert --to script data_upload.ipynb
+
+python data_ingestion.py \
+    --host=localhost \
+    --port=5432 \
+    --user=root \
+    --password=root \
+    --table_name=yellow_taxi_data \
+    --db=ny_taxi \
+    --url=https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz
+
+
+# Dockerised Build
+
+docker build -t ingestion:v01 .
+
+docker run -it \
+    --network=pg-network\
+    ingestion:v01 \
+        --host=pg-database \
+        --port=5432 \
+        --user=root \
+        --password=root \
+        --table_name=yellow_taxi_data \
+        --db=ny_taxi \
+        --url=https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz
+
